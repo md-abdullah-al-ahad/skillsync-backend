@@ -12,3 +12,183 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+/**
+ * =========================
+ * ENUMS
+ * =========================
+ */
+
+enum Role {
+  STUDENT
+  TUTOR
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  BANNED
+}
+
+enum DayOfWeek {
+  MON
+  TUE
+  WED
+  THU
+  FRI
+  SAT
+  SUN
+}
+
+enum BookingStatus {
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+/**
+ * =========================
+ * BETTER AUTH MODELS
+ * =========================
+ */
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+
+  /**
+   * 🔽 YOUR APP FIELDS
+   */
+  role   Role       @default(STUDENT)
+  status UserStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /**
+   * Relations
+   */
+  sessions     Session[]
+  accounts     Account[]
+  tutorProfile TutorProfile?
+  bookings     Booking[]     @relation("StudentBookings")
+  reviews      Review[]
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  access_token      String?
+  refresh_token     String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+/**
+ * =========================
+ * APP MODELS
+ * =========================
+ */
+
+model TutorProfile {
+  id          String  @id @default(uuid())
+  userId      String  @unique
+  bio         String?
+  hourlyRate  Float
+  experience  Int
+  ratingAvg   Float   @default(0)
+  ratingCount Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categories   TutorCategory[]
+  availability AvailabilitySlot[]
+  bookings     Booking[]
+  reviews      Review[]
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now())
+
+  tutors TutorCategory[]
+}
+
+model TutorCategory {
+  tutorProfileId String
+  categoryId     String
+
+  tutorProfile TutorProfile @relation(fields: [tutorProfileId], references: [id], onDelete: Cascade)
+  category     Category     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([tutorProfileId, categoryId])
+}
+
+model AvailabilitySlot {
+  id             String    @id @default(uuid())
+  tutorProfileId String
+  dayOfWeek      DayOfWeek
+  startTime      String
+  endTime        String
+  isActive       Boolean   @default(true)
+
+  tutorProfile TutorProfile @relation(fields: [tutorProfileId], references: [id], onDelete: Cascade)
+}
+
+model Booking {
+  id             String        @id @default(uuid())
+  studentId      String
+  tutorProfileId String
+  startTime      DateTime
+  endTime        DateTime
+  price          Float
+  status         BookingStatus @default(CONFIRMED)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  student      User         @relation("StudentBookings", fields: [studentId], references: [id], onDelete: Cascade)
+  tutorProfile TutorProfile @relation(fields: [tutorProfileId], references: [id], onDelete: Cascade)
+  review       Review?
+}
+
+model Review {
+  id             String  @id @default(uuid())
+  bookingId      String  @unique
+  studentId      String
+  tutorProfileId String
+  rating         Int
+  comment        String?
+
+  createdAt DateTime @default(now())
+
+  booking      Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  student      User         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  tutorProfile TutorProfile @relation(fields: [tutorProfileId], references: [id], onDelete: Cascade)
+}
