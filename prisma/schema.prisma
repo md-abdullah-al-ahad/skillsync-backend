@@ -1,11 +1,7 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// Prisma schema for SkillBridge + BetterAuth
 
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../generated/prisma"
 }
 
@@ -53,82 +49,108 @@ enum BookingStatus {
  */
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
+  id            String   @id
+  name          String
+  email         String
+  emailVerified Boolean  @default(false)
   image         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   /**
-   * 🔽 YOUR APP FIELDS
+   * 👇 BetterAuth relations
+   */
+  sessions Session[]
+  accounts Account[]
+
+  /**
+   * 👇 SkillBridge extensions
    */
   role   Role       @default(STUDENT)
   status UserStatus @default(ACTIVE)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
   /**
-   * Relations
+   * 👇 SkillBridge relations
    */
-  sessions     Session[]
-  accounts     Account[]
   tutorProfile TutorProfile?
   bookings     Booking[]     @relation("StudentBookings")
   reviews      Review[]
+
+  @@unique([email])
+  @@map("user")
 }
 
 model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
 }
 
 model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  access_token      String?
-  refresh_token     String?
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?
-  session_state     String?
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
 }
 
 /**
  * =========================
- * APP MODELS
+ * SKILLSYNC / SKILLBRIDGE MODELS
  * =========================
  */
 
 model TutorProfile {
-  id          String  @id @default(uuid())
-  userId      String  @unique
+  id          String   @id @default(uuid())
+  userId      String   @unique
   bio         String?
-  hourlyRate  Float
-  experience  Int
-  ratingAvg   Float   @default(0)
-  ratingCount Int     @default(0)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  hourlyRate  Float?
+  experience  Int?
+  ratingAvg   Float    @default(0)
+  ratingCount Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  categories   TutorCategory[]
-  availability AvailabilitySlot[]
   bookings     Booking[]
   reviews      Review[]
+  categories   TutorCategory[]
+  availability AvailabilitySlot[]
 }
 
 model Category {
@@ -169,9 +191,8 @@ model Booking {
   endTime        DateTime
   price          Float
   status         BookingStatus @default(CONFIRMED)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   student      User         @relation("StudentBookings", fields: [studentId], references: [id], onDelete: Cascade)
   tutorProfile TutorProfile @relation(fields: [tutorProfileId], references: [id], onDelete: Cascade)
