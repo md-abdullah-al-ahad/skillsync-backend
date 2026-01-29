@@ -67,6 +67,7 @@ model User {
    * 👇 SkillBridge extensions
    */
   role   Role       @default(STUDENT)
+  phone  String?
   status UserStatus @default(ACTIVE)
 
   /**
