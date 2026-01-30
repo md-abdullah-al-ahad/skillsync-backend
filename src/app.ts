@@ -1,4 +1,4 @@
-import express from "express";
+import express, { NextFunction, Request, Response } from "express";
 import { toNodeHandler } from "better-auth/node";
 const app = express();
 import { auth } from "./lib/auth";
