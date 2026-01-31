@@ -28,9 +28,9 @@ app.use("/api/user", authRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/reviews", reviewRoutes);
-// app.use("/api/student", studentRoutes);
-// app.use("/api/tutor", tutorRoutes);
-// app.use("/api/tutors", tutorRoutes);
+app.use("/api/student", studentRoutes);
+app.use("/api/tutor", tutorRoutes);
+app.use("/api/tutors", tutorRoutes);
 
 app.get("/", (req, res) => {
   res.send("Welcome to the Skillsync API!");
