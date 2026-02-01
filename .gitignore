@@ -6,3 +6,8 @@ node_modules
 /src/generated/prisma
 
 /generated/prisma
+.vercel
+
+# Build artifacts
+/api
+/dist

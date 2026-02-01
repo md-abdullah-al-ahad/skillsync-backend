@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { adminService } from "./admin.service";
-import type { UserStatus } from "../../../generated/prisma";
+import type { UserStatus } from "@prisma/client";
 
 /**
  * Get all users with optional filters

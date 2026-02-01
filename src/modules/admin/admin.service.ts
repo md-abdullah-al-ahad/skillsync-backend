@@ -1,5 +1,5 @@
 import { prisma } from "../../lib/prisma";
-import type { UserStatus } from "../../../generated/prisma";
+import type { UserStatus } from "@prisma/client";
 
 export const adminService = {
   getAllUsers: async (filters?: {
