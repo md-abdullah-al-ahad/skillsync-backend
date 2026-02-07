@@ -8,10 +8,12 @@ import { tutorService } from "./tutor.service";
  */
 export const getAllTutors = async (req: Request, res: Response) => {
   try {
-    const { category, minRating, maxPrice, search, page, limit } = req.query;
+    const { category, minPrice, minRating, maxPrice, search, page, limit } =
+      req.query;
 
     const filters: any = {};
     if (category) filters.category = category as string;
+    if (minPrice) filters.minPrice = parseFloat(minPrice as string);
     if (minRating) filters.minRating = parseFloat(minRating as string);
     if (maxPrice) filters.maxPrice = parseFloat(maxPrice as string);
     if (search) filters.search = search as string;
@@ -197,6 +199,114 @@ export const updateTutorAvailability = async (req: Request, res: Response) => {
         error instanceof Error
           ? error.message
           : "Failed to update availability",
+    });
+  }
+};
+
+/**
+ * Get tutor availability (for tutor dashboard)
+ * @route GET /api/tutor/availability
+ * @access Private (Tutors only)
+ */
+export const getTutorAvailability = async (req: Request, res: Response) => {
+  try {
+    const availability = await tutorService.getTutorAvailability(req.user!.id);
+
+    res.status(200).json({
+      success: true,
+      data: availability,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch availability",
+    });
+  }
+};
+
+/**
+ * Add a single availability slot
+ * @route POST /api/tutor/availability
+ * @access Private (Tutors only)
+ */
+export const addTutorAvailability = async (req: Request, res: Response) => {
+  try {
+    const { dayOfWeek, startTime, endTime, isActive } = req.body;
+
+    if (!dayOfWeek || !startTime || !endTime) {
+      return res.status(400).json({
+        success: false,
+        message: "dayOfWeek, startTime, and endTime are required",
+      });
+    }
+
+    const validDays = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+    if (!validDays.includes(dayOfWeek)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid day of week: ${dayOfWeek}`,
+      });
+    }
+
+    const slot = await tutorService.addTutorAvailability(req.user!.id, {
+      dayOfWeek,
+      startTime,
+      endTime,
+      isActive,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Availability added successfully",
+      data: slot,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Failed to add availability",
+    });
+  }
+};
+
+/**
+ * Delete an availability slot
+ * @route DELETE /api/tutor/availability/:id
+ * @access Private (Tutors only)
+ */
+export const deleteTutorAvailability = async (req: Request, res: Response) => {
+  try {
+    const slotId = req.params.id;
+
+    if (!slotId || typeof slotId !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "Valid availability slot id is required",
+      });
+    }
+
+    const deleted = await tutorService.deleteTutorAvailability(
+      req.user!.id,
+      slotId,
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Availability deleted successfully",
+      data: deleted,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Failed to delete availability",
     });
   }
 };

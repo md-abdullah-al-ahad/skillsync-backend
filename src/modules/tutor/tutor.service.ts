@@ -6,6 +6,7 @@ export const tutorService = {
    */
   getAllTutors: async (filters?: {
     category?: string;
+    minPrice?: number;
     minRating?: number;
     maxPrice?: number;
     search?: string;
@@ -35,21 +36,46 @@ export const tutorService = {
     }
 
     // Filter by minimum rating
-    if (filters?.minRating) {
+    if (filters?.minRating !== undefined) {
       where.ratingAvg = { gte: filters.minRating };
     }
 
-    // Filter by maximum price
-    if (filters?.maxPrice) {
-      where.hourlyRate = { lte: filters.maxPrice };
+    // Filter by price range
+    if (filters?.minPrice !== undefined || filters?.maxPrice !== undefined) {
+      where.hourlyRate = {
+        ...(filters?.minPrice !== undefined ? { gte: filters.minPrice } : {}),
+        ...(filters?.maxPrice !== undefined ? { lte: filters.maxPrice } : {}),
+      };
     }
 
-    // Search by tutor name
+    // Search by tutor name or category
     if (filters?.search) {
-      where.user = {
-        ...where.user,
-        name: { contains: filters.search, mode: "insensitive" },
-      };
+      const search = filters.search;
+      where.OR = [
+        {
+          user: {
+            name: { contains: search, mode: "insensitive" },
+          },
+        },
+        {
+          categories: {
+            some: {
+              category: {
+                name: { contains: search, mode: "insensitive" },
+              },
+            },
+          },
+        },
+        {
+          categories: {
+            some: {
+              category: {
+                slug: { contains: search, mode: "insensitive" },
+              },
+            },
+          },
+        },
+      ];
     }
 
     const [tutors, total] = await Promise.all([
@@ -333,6 +359,82 @@ export const tutorService = {
     });
 
     return updatedAvailability;
+  },
+
+  /**
+   * Get tutor availability for the authenticated tutor
+   */
+  getTutorAvailability: async (userId: string) => {
+    const tutorProfile = await prisma.tutorProfile.findUnique({
+      where: { userId },
+    });
+
+    if (!tutorProfile) {
+      throw new Error("Tutor profile not found");
+    }
+
+    return prisma.availabilitySlot.findMany({
+      where: { tutorProfileId: tutorProfile.id },
+      orderBy: { dayOfWeek: "asc" },
+    });
+  },
+
+  /**
+   * Add a single availability slot
+   */
+  addTutorAvailability: async (
+    userId: string,
+    slot: {
+      dayOfWeek: string;
+      startTime: string;
+      endTime: string;
+      isActive?: boolean;
+    },
+  ) => {
+    const tutorProfile = await prisma.tutorProfile.findUnique({
+      where: { userId },
+    });
+
+    if (!tutorProfile) {
+      throw new Error("Tutor profile not found");
+    }
+
+    return prisma.availabilitySlot.create({
+      data: {
+        tutorProfileId: tutorProfile.id,
+        dayOfWeek: slot.dayOfWeek as any,
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+        isActive: slot.isActive ?? true,
+      },
+    });
+  },
+
+  /**
+   * Delete an availability slot by id
+   */
+  deleteTutorAvailability: async (userId: string, slotId: string) => {
+    const tutorProfile = await prisma.tutorProfile.findUnique({
+      where: { userId },
+    });
+
+    if (!tutorProfile) {
+      throw new Error("Tutor profile not found");
+    }
+
+    const slot = await prisma.availabilitySlot.findFirst({
+      where: { id: slotId, tutorProfileId: tutorProfile.id },
+    });
+
+    if (!slot) {
+      throw new Error("Availability slot not found");
+    }
+
+    await prisma.availabilitySlot.delete({
+      where: { id: slotId },
+    });
+
+    return slot;
   },
 
   /**
