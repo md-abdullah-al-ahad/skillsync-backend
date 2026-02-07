@@ -16,6 +16,41 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql", // or "mysql", "postgresql", ...etc
   }),
+  user: {
+    additionalFields: {
+      role: {
+        type: "string",
+        input: true,
+        required: false,
+      },
+    },
+  },
+  databaseHooks: {
+    user: {
+      create: {
+        async before(user) {
+          const rawRole =
+            typeof (user as { role?: string }).role === "string"
+              ? (user as { role?: string }).role!.toUpperCase()
+              : "STUDENT";
+          const allowedRoles = new Set(["STUDENT", "TUTOR"]);
+          const safeRole = allowedRoles.has(rawRole) ? rawRole : "STUDENT";
+          return { data: { role: safeRole } };
+        },
+        async after(user) {
+          if (!user || (user as { role?: string }).role !== "TUTOR") return;
+
+          await prisma.tutorProfile.upsert({
+            where: { userId: user.id },
+            update: {},
+            create: {
+              userId: user.id,
+            },
+          });
+        },
+      },
+    },
+  },
   baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
   trustedOrigins: [process.env.APP_URL || "http://localhost:3000"],
   advanced: {
