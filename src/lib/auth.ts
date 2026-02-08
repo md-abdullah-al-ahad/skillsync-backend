@@ -66,19 +66,25 @@ export const auth = betterAuth({
     sendOnSignUp: true,
     sendVerificationEmail: async ({ user, url, token }, request) => {
       try {
+        const frontendOrigin = (process.env.APP_URL || "http://localhost:3000")
+          .replace(/\/+$/, "");
+        const verifyUrl = `${frontendOrigin}/verify-email?token=${encodeURIComponent(
+          token,
+        )}`;
+
         const info = await transporter.sendMail({
           from: `"SkillSync" <${process.env.APP_USER}>`,
           to: user.email,
           subject: "Verify your email - SkillSync",
-          text: `Hello ${user.name},\n\nPlease verify your email by clicking the link below:\n\n${url}\n\nIf you didn't create an account, please ignore this email.`,
+          text: `Hello ${user.name},\n\nPlease verify your email by clicking the link below:\n\n${verifyUrl}\n\nIf you didn't create an account, please ignore this email.`,
           html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2>Welcome to SkillSync!</h2>
             <p>Hello ${user.name},</p>
             <p>Thank you for signing up. Please verify your email address by clicking the button below:</p>
-            <a href="${url}" style="display: inline-block; padding: 12px 24px; background-color: #007bff; color: white; text-decoration: none; border-radius: 4px; margin: 20px 0;">Verify Email</a>
+            <a href="${verifyUrl}" style="display: inline-block; padding: 12px 24px; background-color: #007bff; color: white; text-decoration: none; border-radius: 4px; margin: 20px 0;">Verify Email</a>
             <p>Or copy and paste this link into your browser:</p>
-            <p style="color: #666; word-break: break-all;">${url}</p>
+            <p style="color: #666; word-break: break-all;">${verifyUrl}</p>
             <p style="color: #999; font-size: 12px; margin-top: 30px;">If you didn't create an account, please ignore this email.</p>
           </div>
         `,
