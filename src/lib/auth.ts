@@ -51,8 +51,8 @@ export const auth = betterAuth({
       },
     },
   },
-  baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
-  trustedOrigins: [process.env.APP_URL || "http://localhost:3000"],
+  baseURL: (process.env.BETTER_AUTH_URL || "http://localhost:3000").trim(),
+  trustedOrigins: [(process.env.APP_URL || "http://localhost:3000").trim()],
   advanced: {
     disableCSRFCheck: process.env.NODE_ENV === "development",
   },
